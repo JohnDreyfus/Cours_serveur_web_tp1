@@ -1,57 +1,307 @@
-# TP 1 - premier site
-## **Objectif du TP**
-Mettre en place un **premier site web statique (HTML + CSS)** et le déployer sur un serveur **Nginx**, avec gestion via **Git/GitHub** et connexion sécurisée en **SSH**.
+# **TP 1 — Premier site avec Nginx**
 
-À la fin du TP, votre site devra être accessible depuis votre VM via **Nginx**.
+## **Objectifs pédagogiques**
 
+- Créer un **site statique simple (HTML + CSS)**
+- Utiliser **Git et GitHub** pour versionner et déployer le projet
+- Gérer la **connexion SSH** entre machine locale et serveur
+- Déployer le projet sur une **VM avec Nginx**
+- Configurer Nginx avec :
+    - **HTTP → HTTPS** (certificat auto-signé)
+    - **gzip** pour la compression
+    - **logs dédiés**
 ---
-## **Étape 1 — Préparer le projet en local**
-
-1. Créez un dossier nommé **premier-site/** avec l’arborescence suivante :
-```
+## **Étape 1 — Créer le projet en local**
+### **1.1 Créer l’arborescence**
+```sh
 premier-site/
 ├── index.html
 └── assets/
     └── style.css
 ```
+### **1.2 Contenu minimal**
+**index.html**
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Premier site</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header>
+    <h1>Bienvenue sur mon premier site 🎉</h1>
+    <p>Ce site est servi par <strong>Nginx</strong> avec HTTPS et Gzip.</p>
+  </header>
 
-2. Créez le fichier index.html contenant une structure simple de page HTML (titre, en-tête, paragraphe, bouton interactif, etc.).
-    
-3. Créez le fichier assets/style.css pour mettre en forme la page (mise en page, couleurs, styles du bouton, etc.).
-    
-4. Vérifiez en ouvrant index.html dans un navigateur local que la page s’affiche correctement.
+  <main>
+    <section>
+      <h2>Présentation</h2>
+      <p>Ceci est une simple page HTML + CSS déployée dans un mini-lab Nginx.</p>
+    </section>
+
+    <section>
+      <h2>Bouton interactif</h2>
+      <button onclick="document.getElementById('demo').textContent='👋 Bonjour, vous avez cliqué !';">
+        Clique-moi
+      </button>
+      <p id="demo"></p>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 - Mon Premier Site</p>
+  </footer>
+</body>
+</html>
+```
+
+**assets/style.css**
+```css
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  line-height: 1.6;
+  background: #f4f4f4;
+  color: #333;
+}
+
+header {
+  background: #0077cc;
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+h1 { margin: 0; }
+
+main { padding: 20px; }
+
+section {
+  margin-bottom: 20px;
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+button {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  font-size: 16px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+button:hover { background: #218838; }
+
+footer {
+  text-align: center;
+  padding: 15px;
+  background: #222;
+  color: #bbb;
+}
+```
 
 ---
-## **Étape 2 — Gérer le projet avec Git & GitHub**
-### **Côté client (votre machine locale)**
-1. Configurez une **nouvelle paire de clés SSH** pour GitHub.
-2. Ajoutez la clé publique à votre compte GitHub (voir documentation GitHub).
-	https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent
-3. Initialisez un dépôt Git dans votre dossier premier-site/.
-4. Faites un premier commit avec vos fichiers.
-5. Créez un dépôt vide sur GitHub (sans README ni fichiers automatiques).
-6. Poussez votre projet local vers GitHub en utilisant **l’URL SSH**.
+## **Étape 2 — Versionner avec Git & GitHub**
+### **2.1 Générer une clé SSH (machine locale)**
+```sh
+ssh-keygen -t ed25519 -C "votre_email@example.com"
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519
+cat ~/.ssh/id_ed25519.pub
+```
+
+Ajouter la clé publique dans GitHub :
+_Settings → SSH and GPG Keys → New SSH key_.
+### **2.2 Créer le dépôt local**
+```sh
+cd premier-site
+git init
+git add .
+git commit -m "Initial commit - Premier site"
+```
+### **2.3 Créer le dépôt GitHub**
+- Créez un dépôt vide sur GitHub (ex : premier-site).
+### **2.4 Envoyer le projet**
+```sh
+git remote add origin git@github.com:<votre-compte>/premier-site.git
+git branch -M main
+git push -u origin main
+```
 
 ---
 ## **Étape 3 — Préparer le serveur (VM)**
-### **Côté serveur (votre VM)**
-1. Générez une **nouvelle paire de clés SSH** sur la VM et configurez-la également sur votre compte GitHub.
-2. Depuis la VM, testez la connexion SSH avec GitHub.
-3. Clonez votre projet GitHub dans le répertoire /var/www/ (ou un autre dossier prévu pour Nginx).
-4. Vérifiez les droits et permissions de vos fichiers pour qu’ils soient lisibles par Nginx.
+### **3.1 Générer une clé SSH (côté serveur)**
+```sh
+ssh-keygen -t ed25519 -C "votre_email@example.com"
+cat ~/.ssh/id_ed25519.pub
+```
+
+Ajouter la clé publique à GitHub.
+
+Tester :
+```sh
+ssh -T git@github.com
+```
+### **3.2 Cloner le projet**
+```sh
+cd /var/www
+sudo git clone git@github.com:<votre-compte>/premier-site.git
+sudo mv premier-site /var/www/premier-site
+```
+### **3.3 Permissions**
+```sh
+sudo chown -R root:www-data /var/www/premier-site
+sudo find /var/www/premier-site -type d -exec chmod 755 {} \;
+sudo find /var/www/premier-site -type f -exec chmod 644 {} \;
+```
 
 ---
 ## **Étape 4 — Configurer Nginx**
-1. Installez Nginx si ce n’est pas déjà fait.
-2. Modifiez ou créez une configuration de serveur virtuel (server block) pour Nginx afin d’afficher votre site statique.
-    - Le serveur doit répondre sur le port **80 (HTTP)**.
-    - Le **document root** doit pointer vers le dossier de votre projet (/var/www/premier-site).
-    
-3. Activez la configuration et rechargez Nginx.
-4. Vérifiez dans votre navigateur ou avec curl que le site s’affiche correctement.
+
+### **4.1 Installer Nginx**
+```sh
+sudo apt update
+sudo apt install -y nginx
+```
+### **4.2 Créer la config du site**
+**/etc/nginx/sites-available/premier-site.conf**
+```sh
+server {
+    listen 80;
+    listen [::]:80;
+
+    server_name localhost;
+
+    root /var/www/premier-site;
+    index index.html;
+
+    access_log /var/log/nginx/premier-site.access.log;
+    error_log  /var/log/nginx/premier-site.error.log;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+```
+### **4.3 Activer le site**
+```sh
+sudo ln -s /etc/nginx/sites-available/premier-site.conf /etc/nginx/sites-enabled/
+```
+### **4.4 Vérifier & recharger**
+```sh
+sudo nginx -t
+sudo systemctl reload nginx
+```
+### **4.5 Tester**
+Votre page doit s’afficher.
+### **4.6 Vérifier les logs**
+```sh
+sudo tail -n 20 /var/log/nginx/premier-site.access.log
+sudo tail -n 20 /var/log/nginx/premier-site.error.log
+```
 
 ---
-## **Résultats attendus**
-- Votre projet **premier-site** est versionné avec Git et disponible sur GitHub.
-- Votre serveur VM est connecté à GitHub via SSH et peut cloner/puller le projet.
-- Nginx affiche correctement votre site statique à l’adresse de la VM.
+## **Étape 5 — Ajouter HTTPS (certificat auto-signé)**
+
+### **5.1 Installer OpenSSL**
+```sh
+sudo apt install -y openssl
+```
+### **5.2 Créer le certificat**
+```sh
+sudo mkdir -p /etc/ssl/nginx
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout /etc/ssl/nginx/selfsigned.key \
+  -out /etc/ssl/nginx/selfsigned.crt \
+  -subj "/C=FR/ST=Local/L=Local/O=TP/OU=Nginx/CN=localhost"
+```
+### **5.3 Configurer le vhost HTTPS**
+**/etc/nginx/sites-available/premier-site-ssl.conf**
+```sh
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+
+    server_name localhost;
+
+    ssl_certificate     /etc/ssl/nginx/selfsigned.crt;
+    ssl_certificate_key /etc/ssl/nginx/selfsigned.key;
+
+    root /var/www/premier-site;
+    index index.html;
+
+    access_log /var/log/nginx/premier-site-ssl.access.log;
+    error_log  /var/log/nginx/premier-site-ssl.error.log;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+```
+### **5.4 Redirection HTTP → HTTPS**
+Modifier **premier-site.conf** :
+```sh
+server {
+    listen 80;
+    server_name localhost;
+    return 301 https://$host$request_uri;
+}
+```
+### **5.5 Activer et recharger**
+```sh
+sudo ln -s /etc/nginx/sites-available/premier-site-ssl.conf /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+---
+## **Étape 6 — Activer Gzip**
+
+**/etc/nginx/conf.d/gzip.conf**
+```sh
+gzip on;
+gzip_comp_level 5;
+gzip_min_length 256;
+gzip_types
+  text/plain
+  text/css
+  application/javascript
+  application/json
+  image/svg+xml;
+```
+
+Recharger Nginx :
+```sh
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+---
+## **Étape 7 — Tests finaux**
+
+### **7.1 Redirection HTTP → HTTPS**
+```sh
+curl -I http://localhost
+```
+➡️ Doit renvoyer 301 Moved Permanently.
+### **7.2 Page HTTPS**
+```sh
+curl -k https://localhost
+```
+➡️ Affiche le HTML de la page.
+### **7.3 Vérifier Gzip**
+```sh
+curl -kI --compressed https://localhost/assets/style.css | grep -i content-encoding
+```
+➡️ Doit contenir Content-Encoding: gzip.
+### **7.4 Vérifier les logs**
+```sh
+sudo tail -n 20 /var/log/nginx/premier-site*.log
+```
