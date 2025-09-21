@@ -298,7 +298,7 @@ curl -k https://localhost
 ➡️ Affiche le HTML de la page.
 ### **7.3 Vérifier Gzip**
 ```sh
-curl -kI --compressed https://localhost/assets/style.css | grep -i content-encoding
+curl -k -H "Accept-Encoding: gzip" -I https://192.168.1.165/assets/style.css
 ```
 ➡️ Doit contenir Content-Encoding: gzip.
 ### **7.4 Vérifier les logs**
